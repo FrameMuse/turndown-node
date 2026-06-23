@@ -532,7 +532,7 @@ fn escape_markdown(text: &str) -> String {
 
     for c in text.chars() {
         match c {
-            '\\' | '*' | '_' | '[' | ']' | '#' | '+' | '-' | '`' => {
+            '\\' | '*' | '_' | '#' | '+' | '-' | '`' => {
                 result.push('\\');
                 result.push(c);
             }

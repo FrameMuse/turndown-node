@@ -222,18 +222,41 @@ fn collect_list_items(node: &Node, options: &Options, ctx: &Context) -> Vec<List
 
     for child in node.children() {
         if child.is_element() && child.tag_name() == "li" {
-            let blocks = convert_children(child, options, ctx);
-            items.push(ListItem::new(if blocks.is_empty() {
-                // Try getting inline content
-                let inlines = collect_inlines(child, options, ctx);
-                vec![Block::Paragraph(inlines)]
+            // Check if li contains any block-level children
+            let has_blocks = child.children().any(|c| {
+                c.is_element() && is_block_tag(&c.tag_name())
+            });
+
+            let blocks = if has_blocks {
+                convert_children(child, options, ctx)
             } else {
-                blocks
-            }));
+                let inlines = collect_inlines(child, options, ctx);
+                if inlines.is_empty() {
+                    Vec::new()
+                } else {
+                    vec![Block::Paragraph(inlines)]
+                }
+            };
+
+            items.push(ListItem::new(blocks));
         }
     }
 
     items
+}
+
+/// Check if a tag is a block-level element
+fn is_block_tag(tag: &str) -> bool {
+    matches!(
+        tag,
+        "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+            | "blockquote" | "pre" | "table"
+            | "ul" | "ol" | "li"
+            | "div" | "section" | "article" | "main"
+            | "aside" | "header" | "footer" | "nav"
+            | "figure" | "figcaption" | "address"
+            | "form" | "fieldset" | "hr"
+    )
 }
 
 /// Convert a table element
@@ -509,7 +532,7 @@ fn escape_markdown(text: &str) -> String {
 
     for c in text.chars() {
         match c {
-            '\\' | '*' | '_' | '[' | ']' | '#' | '+' | '-' | '!' | '`' => {
+            '\\' | '*' | '_' | '[' | ']' | '#' | '+' | '-' | '`' => {
                 result.push('\\');
                 result.push(c);
             }

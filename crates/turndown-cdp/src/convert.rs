@@ -170,17 +170,29 @@ fn convert_element(node: &Node, options: &Options, ctx: &Context) -> Option<Bloc
 
         "table" => convert_table(node, options, ctx),
 
-        // Container elements - just process children
+        // Container elements - check if children are all inline (merge), otherwise process normally
         "div" | "section" | "article" | "main" | "aside" | "header" | "footer" | "nav"
-        | "figure" | "figcaption" | "address" | "form" | "fieldset" => {
-            let blocks = convert_children(node, options, ctx);
-            // Return as document fragment (will be flattened)
-            if blocks.len() == 1 {
-                Some(blocks.into_iter().next().unwrap())
-            } else if blocks.is_empty() {
-                None
+        | "figure" | "figcaption" | "address" | "form" | "fieldset"
+        => {
+            let has_blocks = node.children().any(|c| {
+                c.is_element() && is_block_tag(&c.tag_name())
+            });
+            if has_blocks {
+                let blocks = convert_children(node, options, ctx);
+                if blocks.len() == 1 {
+                    Some(blocks.into_iter().next().unwrap())
+                } else if blocks.is_empty() {
+                    None
+                } else {
+                    Some(Block::Document(blocks))
+                }
             } else {
-                Some(Block::Document(blocks))
+                let inlines = collect_inlines(node, options, ctx);
+                if inlines.is_empty() {
+                    None
+                } else {
+                    Some(Block::Paragraph(inlines))
+                }
             }
         }
 
